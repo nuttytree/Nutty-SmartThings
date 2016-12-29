@@ -79,14 +79,18 @@ def initialize() {
 def masterOn(evt) {
     log.debug "Master switch was turned on"
     def on = allSwitches.find { it.currentSwitch == "on" }
-    log.debug "Found switch ${on} that was already on"
     if (!on) {
-	    allSwitches.each { s ->
+	    def leaveOn = false
+        allSwitches.each { s ->
     	    if (settings."turnOn${s.displayName}") {
 	    		log.debug "Turning on ${s}"
     	    	s.on()
+                leaveOn = true
 	        }
     	}
+        if (!leaveOn) {
+        	evt.device.off()
+        }
     }
 }
 
