@@ -21,7 +21,7 @@ metadata {
 		capability "Refresh"
 		capability "Sensor"
 		capability "Health Check"
-
+        
 		fingerprint mfr:"0063", prod:"4457", deviceJoinName: "Z-Wave Wall Dimmer"
 		fingerprint mfr:"0063", prod:"4944", deviceJoinName: "GE Z-Wave Wall Dimmer"
 		fingerprint mfr:"0063", prod:"5044", deviceJoinName: "Z-Wave Plug-In Dimmer"
@@ -46,12 +46,14 @@ metadata {
 	}
 
 	preferences {
-		input "ledIndicator", "enum", title: "LED Indicator", description: "Turn LED indicator... ", required: true, options:["on": "When On", "off": "When Off", "never": "Never"], defaultValue: "off"
-		input "invertSwitch", "bool", title: "Invert Switch", description: "Invert switch? ", required: true, defaultValue: false
-		input "zwaveSteps", "number", title: "Z-Wave Dim Steps", description: "Z-Wave Dim Steps ", required: true, defaultValue: 1, range: "1..99"
-		input "zwaveDelay", "number", title: "Z-Wave Dim Delay (10ms Increments)", description: "Z-Wave Dim Delay (10ms Increments) ", required: true, defaultValue: 3, range: "1..255"
-		input "manualSteps", "number", title: "Manual Dim Steps", description: "Manual Dim Steps ", required: true, defaultValue: 1, range: "1..99"
-		input "manualDelay", "number", title: "Manual Dim Delay (10ms Increments)", description: "Manual Dim Delay (10ms Increments) ", required: true, defaultValue: 3, range: "1..255"
+		input "ledIndicator", "enum", title: "LED Indicator", description: "Turn LED indicator... ", required: true, options:["on": "When On", "off": "When Off", "never": "Never"]
+		input "invertSwitch", "bool", title: "Invert Switch", description: "Invert switch? ", required: true
+		input "zwaveSteps", "number", title: "Z-Wave Dim Steps (1-99)", description: "Z-Wave Dim Steps ", required: true, range: "1..99"
+		input "zwaveDelay", "number", title: "Z-Wave Dim Delay (10ms Increments, 1-255)", description: "Z-Wave Dim Delay (10ms Increments) ", required: true, range: "1..255"
+		input "manualSteps", "number", title: "Manual Dim Steps (1-99)", description: "Manual Dim Steps ", required: true, range: "1..99"
+		input "manualDelay", "number", title: "Manual Dim Delay (10ms Increments, 1-255)", description: "Manual Dim Delay (10ms Increments) ", required: true, range: "1..255"
+		input "allonSteps", "number", title: "All-On/All-Off Dim Steps (1-99)", description: "All-On/All-Off Dim Steps ", required: true, range: "1..99"
+		input "allonDelay", "number", title: "All-On/All-Off Dim Delay (10ms Increments, 1-255)", description: "All-On/All-Off Dim Delay (10ms Increments) ", required: true, range: "1..255"
 	}
 
 	tiles(scale: 2) {
@@ -90,12 +92,16 @@ def updated() {
     commands << new physicalgraph.device.HubAction(zwave.configurationV1.configurationSet(configurationValue: [zwaveDelay], parameterNumber: 8, size: 1).format())
     commands << new physicalgraph.device.HubAction(zwave.configurationV1.configurationSet(configurationValue: [manualSteps], parameterNumber: 9, size: 1).format())
     commands << new physicalgraph.device.HubAction(zwave.configurationV1.configurationSet(configurationValue: [manualDelay], parameterNumber: 10, size: 1).format())
+    commands << new physicalgraph.device.HubAction(zwave.configurationV1.configurationSet(configurationValue: [allonSteps], parameterNumber: 11, size: 1).format())
+	commands << new physicalgraph.device.HubAction(zwave.configurationV1.configurationSet(configurationValue: [allonDelay], parameterNumber: 12, size: 1).format())
     commands << new physicalgraph.device.HubAction(zwave.configurationV1.configurationGet(parameterNumber: 3).format())
     commands << new physicalgraph.device.HubAction(zwave.configurationV1.configurationGet(parameterNumber: 4).format())
     commands << new physicalgraph.device.HubAction(zwave.configurationV1.configurationGet(parameterNumber: 7).format())
     commands << new physicalgraph.device.HubAction(zwave.configurationV1.configurationGet(parameterNumber: 8).format())
     commands << new physicalgraph.device.HubAction(zwave.configurationV1.configurationGet(parameterNumber: 9).format())
     commands << new physicalgraph.device.HubAction(zwave.configurationV1.configurationGet(parameterNumber: 10).format())
+    commands << new physicalgraph.device.HubAction(zwave.configurationV1.configurationGet(parameterNumber: 11).format())
+    commands << new physicalgraph.device.HubAction(zwave.configurationV1.configurationGet(parameterNumber: 12).format())
     sendHubCommand(commands, 1500)
 }
 
