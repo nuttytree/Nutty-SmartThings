@@ -111,7 +111,7 @@ def parse(String description) {
     def result = null
 	if (description != "updated") {
 		log.debug "parse() >> zwave.parse($description)"
-		def cmd = zwave.parse(description, [0x20: 1, 0x26: 1, 0x70: 1])
+		def cmd = zwave.parse(description, [0x70: 2])
 		if (cmd) {
 			result = zwaveEvent(cmd)
 		}
@@ -119,8 +119,6 @@ def parse(String description) {
 	if (result?.name == 'hail' && hubFirmwareLessThan("000.011.00602")) {
 		result = [result, response(zwave.basicV1.basicGet())]
 		log.debug "Was hailed: requesting state update"
-	} else {
-		log.debug "Parse returned ${result?.descriptionText}"
 	}
 	return result
 }
@@ -136,10 +134,12 @@ def zwaveEvent(physicalgraph.zwave.commands.crc16encapv1.Crc16Encap cmd) {
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicReport cmd) {
+    log.debug "---BASIC REPORT V1--- ${device.displayName} sent ${cmd}"
 	sendEvent(name: "switch", value: cmd.value ? "on" : "off", type: "physical")
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicSet cmd) {
+    log.debug "---BASIC SET V1--- ${device.displayName} sent ${cmd}"
 	if (cmd.value == 255) {
     	sendEvent(name: "button", value: "pushed", data: [buttonNumber: "1"], descriptionText: "Double-tap up (button 1) on $device.displayName", isStateChange: true, type: "physical")
     }
@@ -163,7 +163,8 @@ def zwaveEvent(physicalgraph.zwave.commands.associationv2.AssociationReport cmd)
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.configurationv2.ConfigurationReport cmd) {
-	if (cmd.parameterNumber == 3) {
+    log.debug "---CONFIGURATION REPORT V2--- ${device.displayName} sent ${cmd}"
+    if (cmd.parameterNumber == 3) {
     	def value = cmd.configurationValue[0] == 1 ? "when on" : cmd.configurationValue[0] == 2 ? "never" : "when off"
         sendEvent(name: "indicatorStatus", value: value, displayed: false)
     }
@@ -174,10 +175,12 @@ def zwaveEvent(physicalgraph.zwave.commands.configurationv2.ConfigurationReport 
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd) {
+    log.debug "---BINARY SWITCH REPORT V1--- ${device.displayName} sent ${cmd}"
     sendEvent(name: "switch", value: cmd.value ? "on" : "off", type: "digital")
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.manufacturerspecificv2.ManufacturerSpecificReport cmd) {
+    log.debug "---MANUFACTURER SPECIFIC REPORT V2---"
 	log.debug "manufacturerId:   ${cmd.manufacturerId}"
 	log.debug "manufacturerName: ${cmd.manufacturerName}"
     state.manufacturer=cmd.manufacturerName
