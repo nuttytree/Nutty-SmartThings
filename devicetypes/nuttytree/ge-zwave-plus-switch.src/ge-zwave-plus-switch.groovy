@@ -17,6 +17,7 @@
  *
  *	Changelog:
  *
+ *  0.11 (03/21/2017) -	Fix version on configuration reports.
  *  0.10 (03/19/2017) -	Initial 0.1 Beta.
  *
  *
