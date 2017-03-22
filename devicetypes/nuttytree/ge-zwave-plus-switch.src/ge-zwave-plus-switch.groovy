@@ -17,6 +17,7 @@
  *
  *	Changelog:
  *
+ *  0.12 (03/22/2017) -	Add the ability to add associations.
  *  0.11 (03/21/2017) -	Fix version on configuration reports.
  *  0.10 (03/19/2017) -	Initial 0.1 Beta.
  *
@@ -68,6 +69,31 @@ metadata {
 		reply "20014B,delay 5000,2602": "command: 2603, payload: 4B"
 		reply "200163,delay 5000,2602": "command: 2603, payload: 63"
 	}
+    
+    preferences {
+        input (
+            type: "paragraph",
+            element: "paragraph",
+            title: "Configure Association Groups:",
+            description: "Devices in association group 2 will receive Basic Set commands directly from the switch when it is turned on or off. Use this to control another device as if it was connected to this switch.\n\n" +
+                         "Devices in association group 3 will receive Basic Set commands directly from the switch when it is double tapped up or down.\n\n" +
+                         "Devices are entered as a comma delimited list of IDs in hexadecimal format."
+        )
+
+        input (
+            name: "requestedGroup2",
+            title: "Association Group 2 Members (Max of 5):",
+            type: "text",
+            required: false
+        )
+
+        input (
+            name: "requestedGroup3",
+            title: "Association Group 3 Members (Max of 4):",
+            type: "text",
+            required: false
+        )
+    }
 
 	tiles(scale:2) {
 		multiAttributeTile(name:"switch", type: "lighting", width: 6, height: 4, canChangeIcon: true){
@@ -112,7 +138,7 @@ def parse(String description) {
     def result = null
 	if (description != "updated") {
 		log.debug "parse() >> zwave.parse($description)"
-		def cmd = zwave.parse(description, [0x70: 2])
+		def cmd = zwave.parse(description, [0x20: 1, 0x25: 1, 0x56: 1, 0x70: 2, 0x72: 2, 0x85: 2])
 		if (cmd) {
 			result = zwaveEvent(cmd)
 		}
@@ -151,6 +177,7 @@ def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicSet cmd) {
 
 def zwaveEvent(physicalgraph.zwave.commands.associationv2.AssociationReport cmd) {
 	log.debug "---ASSOCIATION REPORT V2--- ${device.displayName} sent groupingIdentifier: ${cmd.groupingIdentifier} maxNodesSupported: ${cmd.maxNodesSupported} nodeId: ${cmd.nodeId} reportsToFollow: ${cmd.reportsToFollow}"
+    state.group3 = "1,2"
     if (cmd.groupingIdentifier == 3) {
     	if (cmd.nodeId.contains(zwaveHubNodeId)) {
         	sendEvent(name: "numberOfButtons", value: 2, displayed: false)
@@ -192,10 +219,12 @@ def zwaveEvent(physicalgraph.zwave.commands.manufacturerspecificv2.ManufacturerS
     sendEvent([descriptionText: "$device.displayName MSR: $msr", isStateChange: false])
 }
 
+def zwaveEvent(physicalgraph.zwave.Command cmd) {
+    log.warn "${device.displayName} received unhandled command: ${cmd}"
+}
+
 // handle commands
 def configure() {
-	log.debug "Executing 'configure'"
-    
     def cmds = []
     // Get current config parameter values
     cmds << zwave.configurationV2.configurationGet(parameterNumber: 3).format()
@@ -205,6 +234,32 @@ def configure() {
     cmds << zwave.associationV2.associationSet(groupingIdentifier: 3, nodeId: zwaveHubNodeId)
     
     delayBetween(cmds,500)
+}
+
+def updated() {
+    if (state.lastUpdated && now() <= state.lastUpdated + 3000) return
+    state.lastUpdated = now()
+
+	def nodes = []
+    def cmds = []
+
+	if (settings.requestedGroup2 != state.currentGroup2) {
+        nodes = parseAssocGroupList(settings.requestedGroup2, 2)
+        cmds << zwave.associationV2.associationRemove(groupingIdentifier: 2, nodeId: [])
+        cmds << zwave.associationV2.associationSet(groupingIdentifier: 2, nodeId: nodes)
+        cmds << zwave.associationV2.associationGet(groupingIdentifier: 2)
+        state.currentGroup2 = settings.requestedGroup2
+    }
+
+    if (settings.requestedGroup3 != state.currentGroup3) {
+        nodes = parseAssocGroupList(settings.requestedGroup3, 3)
+        cmds << zwave.associationV2.associationRemove(groupingIdentifier: 3, nodeId: [])
+        cmds << zwave.associationV2.associationSet(groupingIdentifier: 3, nodeId: nodes)
+        cmds << zwave.associationV2.associationGet(groupingIdentifier: 3)
+        state.currentGroup3 = settings.requestedGroup3
+    }
+
+	sendHubCommand(cmds.collect{ new physicalgraph.device.HubAction(it.format()) }, 500)
 }
 
 def indicatorWhenOn() {
@@ -245,13 +300,13 @@ def poll() {
 }
 
 def refresh() {
-	log.debug "Executing 'refresh'"
     delayBetween([
-		zwave.switchBinaryV1.switchBinaryGet().format(),
+		zwave.multiChannelAssociationV2.multiChannelAssociationGet(groupingIdentifier: 2).format(),
+        zwave.switchBinaryV1.switchBinaryGet().format(),
 		zwave.manufacturerSpecificV1.manufacturerSpecificGet().format(),
         zwave.configurationV2.configurationGet(parameterNumber: 3).format(),
         zwave.configurationV2.configurationGet(parameterNumber: 4).format(),
-        zwave.associationV2.associationGet(groupingIdentifier: 3).format()
+        zwave.associationV2.associationGet(groupingIdentifier: 3).format(),
 	])
 }
 
@@ -267,4 +322,37 @@ def off() {
 		zwave.basicV1.basicSet(value: 0x00).format(),
 		zwave.switchBinaryV1.switchBinaryGet().format()
 	])
+}
+
+// Private Methods
+
+private parseAssocGroupList(list, group) {
+    def nodes = group == 2 ? [] : [zwaveHubNodeId]
+    if (list) {
+        def nodeList = list.split(',')
+        def max = group == 2 ? 5 : 4
+        def count = 0
+
+        nodeList.each { node ->
+            node = node.trim()
+            if ( count >= max) {
+                log.warn "Association Group ${group}: Number of members is greater than ${max}! The following member was discarded: ${node}"
+            }
+            else if (node.matches("\\p{XDigit}+")) {
+                def nodeId = Integer.parseInt(node,16)
+                if ( (nodeId > 0) & (nodeId < 256) ) {
+                    nodes << nodeId
+                    count++
+                }
+                else {
+                    log.warn "Association Group ${group}: Invalid member: ${node}"
+                }
+            }
+            else {
+                log.warn "Association Group ${group}: Invalid member: ${node}"
+            }
+        }
+    }
+    
+    return nodes
 }
