@@ -17,7 +17,8 @@
  *
  *	Changelog:
  *
- *  0.13 (03/24/2017) - Improve icons and add handler for version report
+ *  0.14 (03/24/2017) - Add logic to prevent adding the hub to an association group.
+ *  0.13 (03/24/2017) - Improve icons and add handler for version report.
  *  0.12 (03/22/2017) -	Add the ability to add associations.
  *  0.11 (03/21/2017) -	Fix version on configuration reports.
  *  0.10 (03/19/2017) -	Initial 0.1 Beta.
@@ -348,7 +349,10 @@ private parseAssocGroupList(list, group) {
             }
             else if (node.matches("\\p{XDigit}+")) {
                 def nodeId = Integer.parseInt(node,16)
-                if ( (nodeId > 0) & (nodeId < 256) ) {
+                if (nodeId == zwaveHubNodeId) {
+                	log.warn "Association Group ${group}: Adding the hub as an association is not allowed (it would break double-tap)."
+                }
+                else if ( (nodeId > 0) & (nodeId < 256) ) {
                     nodes << nodeId
                     count++
                 }
