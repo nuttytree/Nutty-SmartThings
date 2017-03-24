@@ -17,6 +17,7 @@
  *
  *	Changelog:
  *
+ *  0.13 (03/24/2017) - Improve icons and add handler for version report
  *  0.12 (03/22/2017) -	Add the ability to add associations.
  *  0.11 (03/21/2017) -	Fix version on configuration reports.
  *  0.10 (03/19/2017) -	Initial 0.1 Beta.
@@ -98,19 +99,19 @@ metadata {
 	tiles(scale:2) {
 		multiAttributeTile(name:"switch", type: "lighting", width: 6, height: 4, canChangeIcon: true){
 			tileAttribute ("device.switch", key: "PRIMARY_CONTROL") {
-				attributeState "on", label: '${name}', action: "switch.off", icon: "st.Home.home30", backgroundColor: "#79b821", nextState:"turningOff"
-				attributeState "off", label: '${name}', action: "switch.on", icon: "st.Home.home30", backgroundColor: "#ffffff", nextState:"turningOn"
-				attributeState "turningOn", label:"Turning On", action:"switch.off", icon:"st.Home.home30", backgroundColor:"#79b821", nextState:"turningOff"
-				attributeState "turningOff", label:"Turning Off", action:"switch.on", icon:"st.Home.home30", backgroundColor:"#ffffff", nextState:"turningOn"
+				attributeState "on", label: '${name}', action: "switch.off", icon: "https://raw.githubusercontent.com/nuttytree/Nutty-SmartThings/master/devicetypes/nuttytree/ge-zwave-plus-switch.src/SwitchOnIcon.png", backgroundColor: "#79b821", nextState:"turningOff"
+				attributeState "off", label: '${name}', action: "switch.on", icon: "https://raw.githubusercontent.com/nuttytree/Nutty-SmartThings/master/devicetypes/nuttytree/ge-zwave-plus-switch.src/SwitchOffIcon.png", backgroundColor: "#ffffff", nextState:"turningOn"
+				attributeState "turningOn", label:"Turning On", action:"switch.off", icon:"https://raw.githubusercontent.com/nuttytree/Nutty-SmartThings/master/devicetypes/nuttytree/ge-zwave-plus-switch.src/SwitchOnIcon.png", backgroundColor:"#79b821", nextState:"turningOff"
+				attributeState "turningOff", label:"Turning Off", action:"switch.on", icon:"https://raw.githubusercontent.com/nuttytree/Nutty-SmartThings/master/devicetypes/nuttytree/ge-zwave-plus-switch.src/SwitchOffIcon.png", backgroundColor:"#ffffff", nextState:"turningOn"
 			}
 		}
         
         standardTile("doubleUp", "device.button", width: 3, height: 2, decoration: "flat") {
-			state "default", label: "Tap ▲▲", backgroundColor: "#ffffff", action: "doubleUp", icon: "st.Home.home30"
+			state "default", label: "Tap ▲▲", backgroundColor: "#ffffff", action: "doubleUp", icon: "https://raw.githubusercontent.com/nuttytree/Nutty-SmartThings/master/devicetypes/nuttytree/ge-zwave-plus-switch.src/SwitchOnIcon.png"
 		}     
  
         standardTile("doubleDown", "device.button", width: 3, height: 2, decoration: "flat") {
-			state "default", label: "Tap ▼▼", backgroundColor: "#ffffff", action: "doubleDown", icon: "st.Home.home30"
+			state "default", label: "Tap ▼▼", backgroundColor: "#ffffff", action: "doubleDown", icon: "https://raw.githubusercontent.com/nuttytree/Nutty-SmartThings/master/devicetypes/nuttytree/ge-zwave-plus-switch.src/SwitchOffIcon.png"
 		} 
 
 		standardTile("indicator", "device.indicatorStatus", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
@@ -120,8 +121,8 @@ metadata {
 		}
         
 		standardTile("inverted", "device.inverted", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
-			state "not inverted", label: "Not Inverted", action:"inverted", icon:"st.Home.home30", backgroundColor: "#ffffff"
-			state "inverted", label: "Inverted", action:"notInverted", icon:"st.Home.home30", backgroundColor: "#79b821"
+			state "not inverted", label: "Not Inverted", action:"inverted", icon:"https://raw.githubusercontent.com/nuttytree/Nutty-SmartThings/master/devicetypes/nuttytree/ge-zwave-plus-switch.src/SwitchNotInverted.png", backgroundColor: "#ffffff"
+			state "inverted", label: "Inverted", action:"notInverted", icon:"https://raw.githubusercontent.com/nuttytree/Nutty-SmartThings/master/devicetypes/nuttytree/ge-zwave-plus-switch.src/SwitchInverted.png", backgroundColor: "#ffffff"
 		}
 
 		standardTile("refresh", "device.switch", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
@@ -218,6 +219,13 @@ def zwaveEvent(physicalgraph.zwave.commands.manufacturerspecificv2.ManufacturerS
 	updateDataValue("MSR", msr)	
     sendEvent([descriptionText: "$device.displayName MSR: $msr", isStateChange: false])
 }
+
+def zwaveEvent(physicalgraph.zwave.commands.versionv1.VersionReport cmd) {
+	def fw = "${cmd.applicationVersion}.${cmd.applicationSubVersion}"
+	updateDataValue("fw", fw)
+	log.debug "---VERSION REPORT V1--- ${device.displayName} is running firmware version: $fw, Z-Wave version: ${cmd.zWaveProtocolVersion}.${cmd.zWaveProtocolSubVersion}"
+}
+
 
 def zwaveEvent(physicalgraph.zwave.Command cmd) {
     log.warn "${device.displayName} received unhandled command: ${cmd}"
