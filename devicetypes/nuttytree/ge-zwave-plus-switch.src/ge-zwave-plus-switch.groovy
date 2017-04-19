@@ -17,6 +17,7 @@
  *
  *	Changelog:
  *
+ *  0.15 (04/18/2017) - Fix bug in configure() command that was preventing devices from joining properly and cleaned up parse() code
  *  0.14 (03/24/2017) - Add logic to prevent adding the hub to an association group.
  *  0.13 (03/24/2017) - Improve icons and add handler for version report.
  *  0.12 (03/22/2017) -	Add the ability to add associations.
@@ -130,26 +131,23 @@ metadata {
 			state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
 		}
 
-		main "switch"
+		main(["switch"])
         details(["switch", "doubleUp", "doubleDown", "indicator", "inverted", "refresh"])
 	}
 }
 
 // parse events into attributes
 def parse(String description) {
+    log.debug "description: $description"
     def result = null
-	if (description != "updated") {
-		log.debug "parse() >> zwave.parse($description)"
-		def cmd = zwave.parse(description, [0x20: 1, 0x25: 1, 0x56: 1, 0x70: 2, 0x72: 2, 0x85: 2])
-		if (cmd) {
-			result = zwaveEvent(cmd)
-		}
-	}
-	if (result?.name == 'hail' && hubFirmwareLessThan("000.011.00602")) {
-		result = [result, response(zwave.basicV1.basicGet())]
-		log.debug "Was hailed: requesting state update"
-	}
-	return result
+    def cmd = zwave.parse(description, [0x20: 1, 0x25: 1, 0x56: 1, 0x70: 2, 0x72: 2, 0x85: 2])
+    if (cmd) {
+        result = zwaveEvent(cmd)
+        log.debug "Parsed ${cmd} to ${result.inspect()}"
+    } else {
+        log.debug "Non-parsed event: ${description}"
+    }
+    result    
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.crc16encapv1.Crc16Encap cmd) {
@@ -164,30 +162,29 @@ def zwaveEvent(physicalgraph.zwave.commands.crc16encapv1.Crc16Encap cmd) {
 
 def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicReport cmd) {
     log.debug "---BASIC REPORT V1--- ${device.displayName} sent ${cmd}"
-	sendEvent(name: "switch", value: cmd.value ? "on" : "off", type: "physical")
+	createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "physical")
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicSet cmd) {
     log.debug "---BASIC SET V1--- ${device.displayName} sent ${cmd}"
 	if (cmd.value == 255) {
-    	sendEvent(name: "button", value: "pushed", data: [buttonNumber: "1"], descriptionText: "Double-tap up (button 1) on $device.displayName", isStateChange: true, type: "physical")
+    	createEvent(name: "button", value: "pushed", data: [buttonNumber: "1"], descriptionText: "Double-tap up (button 1) on $device.displayName", isStateChange: true, type: "physical")
     }
 	else if (cmd.value == 0) {
-    	sendEvent(name: "button", value: "pushed", data: [buttonNumber: "2"], descriptionText: "Double-tap down (button 2) on $device.displayName", isStateChange: true, type: "physical")
+    	createEvent(name: "button", value: "pushed", data: [buttonNumber: "2"], descriptionText: "Double-tap down (button 2) on $device.displayName", isStateChange: true, type: "physical")
     }
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.associationv2.AssociationReport cmd) {
 	log.debug "---ASSOCIATION REPORT V2--- ${device.displayName} sent groupingIdentifier: ${cmd.groupingIdentifier} maxNodesSupported: ${cmd.maxNodesSupported} nodeId: ${cmd.nodeId} reportsToFollow: ${cmd.reportsToFollow}"
-    state.group3 = "1,2"
     if (cmd.groupingIdentifier == 3) {
     	if (cmd.nodeId.contains(zwaveHubNodeId)) {
-        	sendEvent(name: "numberOfButtons", value: 2, displayed: false)
+        	createEvent(name: "numberOfButtons", value: 2, displayed: false)
         }
         else {
-        	sendEvent(name: "numberOfButtons", value: 0, displayed: false)
 			sendHubCommand(new physicalgraph.device.HubAction(zwave.associationV2.associationSet(groupingIdentifier: 3, nodeId: zwaveHubNodeId).format()))
 			sendHubCommand(new physicalgraph.device.HubAction(zwave.associationV2.associationGet(groupingIdentifier: 3).format()))
+        	createEvent(name: "numberOfButtons", value: 0, displayed: false)
         }
     }
 }
@@ -196,17 +193,17 @@ def zwaveEvent(physicalgraph.zwave.commands.configurationv2.ConfigurationReport 
     log.debug "---CONFIGURATION REPORT V2--- ${device.displayName} sent ${cmd}"
     if (cmd.parameterNumber == 3) {
     	def value = cmd.configurationValue[0] == 1 ? "when on" : cmd.configurationValue[0] == 2 ? "never" : "when off"
-        sendEvent(name: "indicatorStatus", value: value, displayed: false)
+        createEvent(name: "indicatorStatus", value: value, displayed: false)
     }
     else {
     	def value = cmd.configurationValue[0] == 1 ? "inverted" : "not inverted"
-        sendEvent(name: "inverted", value: value, displayed: false)
+        createEvent(name: "inverted", value: value, displayed: false)
     }
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd) {
     log.debug "---BINARY SWITCH REPORT V1--- ${device.displayName} sent ${cmd}"
-    sendEvent(name: "switch", value: cmd.value ? "on" : "off", type: "digital")
+    createEvent(name: "switch", value: cmd.value ? "on" : "off", type: "digital")
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.manufacturerspecificv2.ManufacturerSpecificReport cmd) {
@@ -218,7 +215,7 @@ def zwaveEvent(physicalgraph.zwave.commands.manufacturerspecificv2.ManufacturerS
 	log.debug "productTypeId:    ${cmd.productTypeId}"
 	def msr = String.format("%04X-%04X-%04X", cmd.manufacturerId, cmd.productTypeId, cmd.productId)
 	updateDataValue("MSR", msr)	
-    sendEvent([descriptionText: "$device.displayName MSR: $msr", isStateChange: false])
+    createEvent([descriptionText: "$device.displayName MSR: $msr", isStateChange: false])
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.versionv1.VersionReport cmd) {
@@ -240,7 +237,7 @@ def configure() {
     cmds << zwave.configurationV2.configurationGet(parameterNumber: 4).format()
     
     // Add the hub to association group 3 to get double-tap notifications
-    cmds << zwave.associationV2.associationSet(groupingIdentifier: 3, nodeId: zwaveHubNodeId)
+    cmds << zwave.associationV2.associationSet(groupingIdentifier: 3, nodeId: zwaveHubNodeId).format()
     
     delayBetween(cmds,500)
 }
