@@ -17,6 +17,7 @@
  *
  *	Changelog:
  *
+ *  0.11 (04/23/2017) - Fix bug in configure() command that was preventing devices from joining properly
  *  0.10 (04/19/2017) -	Initial 0.1 Beta.
  *
  *
@@ -32,6 +33,7 @@ metadata {
 		capability "Actuator"
 		capability "Button"
 		capability "Configuration"
+		capability "Health Check"
 		capability "Indicator"
 		capability "Polling"
 		capability "Refresh"
@@ -355,7 +357,7 @@ def configure() {
     cmds << zwave.configurationV2.configurationGet(parameterNumber: 12).format()
     
     // Add the hub to association group 3 to get double-tap notifications
-    cmds << zwave.associationV2.associationSet(groupingIdentifier: 3, nodeId: zwaveHubNodeId)
+    cmds << zwave.associationV2.associationSet(groupingIdentifier: 3, nodeId: zwaveHubNodeId).format()
     
     delayBetween(cmds,500)
 }
@@ -462,6 +464,10 @@ def poll() {
 		cmds << zwave.manufacturerSpecificV1.manufacturerSpecificGet().format()
 	}
 	delayBetween(cmds,500)
+}
+
+def ping() {
+	refresh()
 }
 
 def refresh() {
