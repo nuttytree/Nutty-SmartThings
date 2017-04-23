@@ -17,6 +17,8 @@
  *
  *	Changelog:
  *
+ *  0.13 (04/23/2017) - Fix bug with button press events
+ *  0.12 (04/23/2017) - Fix bug with reporting back dimmer levels
  *  0.11 (04/23/2017) - Fix bug in configure() command that was preventing devices from joining properly
  *  0.10 (04/19/2017) -	Initial 0.1 Beta.
  *
@@ -210,7 +212,7 @@ metadata {
 def parse(String description) {
     log.debug "description: $description"
     def result = null
-    def cmd = zwave.parse(description, [0x20: 1, 0x25: 1, 0x56: 1, 0x70: 2, 0x72: 2, 0x85: 2])
+    def cmd = zwave.parse(description, [0x20: 1, 0x25: 1, 0x26: 3, 0x56: 1, 0x70: 2, 0x72: 2, 0x85: 2])
     if (cmd) {
         result = zwaveEvent(cmd)
         log.debug "Parsed ${cmd} to ${result.inspect()}"
@@ -224,9 +226,10 @@ def zwaveEvent(physicalgraph.zwave.commands.crc16encapv1.Crc16Encap cmd) {
 	log.debug("zwaveEvent(): CRC-16 Encapsulation Command received: ${cmd}")
 	def encapsulatedCommand = zwave.commandClass(cmd.commandClass)?.command(cmd.command)?.parse(cmd.data)
 	if (!encapsulatedCommand) {
-		log.debug("zwaveEvent(): Could not extract command from ${cmd}")
+		log.warn("zwaveEvent(): Could not extract command from ${cmd}")
 	} else {
-		return zwaveEvent(encapsulatedCommand)
+		log.debug("zwaveEvent(): Extracted command ${encapsulatedCommand}")
+        return zwaveEvent(encapsulatedCommand)
 	}
 }
 
@@ -234,11 +237,11 @@ def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicReport cmd) {
 	dimmerEvents(cmd)
 }
 
-def zwaveEvent(physicalgraph.zwave.commands.switchmultilevelv1.SwitchMultilevelReport cmd) {
+def zwaveEvent(physicalgraph.zwave.commands.switchmultilevelv3.SwitchMultilevelReport cmd) {
 	dimmerEvents(cmd)
 }
 
-def zwaveEvent(physicalgraph.zwave.commands.switchmultilevelv1.SwitchMultilevelSet cmd) {
+def zwaveEvent(physicalgraph.zwave.commands.switchmultilevelv3.SwitchMultilevelSet cmd) {
 	dimmerEvents(cmd)
 }
 
@@ -254,10 +257,10 @@ private dimmerEvents(physicalgraph.zwave.Command cmd) {
 
 def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicSet cmd) {
 	if (cmd.value == 255) {
-    	sendEvent(name: "button", value: "pushed", data: [buttonNumber: "1"], descriptionText: "Double-tap up (button 1) on $device.displayName", isStateChange: true, type: "physical")
+    	createEvent(name: "button", value: "pushed", data: [buttonNumber: 1], descriptionText: "Double-tap up (button 1) on $device.displayName", isStateChange: true, type: "physical")
     }
 	else if (cmd.value == 0) {
-    	sendEvent(name: "button", value: "pushed", data: [buttonNumber: "2"], descriptionText: "Double-tap down (button 2) on $device.displayName", isStateChange: true, type: "physical")
+    	createEvent(name: "button", value: "pushed", data: [buttonNumber: 2], descriptionText: "Double-tap down (button 2) on $device.displayName", isStateChange: true, type: "physical")
     }
 }
 
@@ -266,7 +269,7 @@ def zwaveEvent(physicalgraph.zwave.commands.associationv2.AssociationReport cmd)
     state.group3 = "1,2"
     if (cmd.groupingIdentifier == 3) {
     	if (cmd.nodeId.contains(zwaveHubNodeId)) {
-        	sendEvent(name: "numberOfButtons", value: 2, displayed: false)
+        	createEvent(name: "numberOfButtons", value: 2, displayed: false)
         }
         else {
         	sendEvent(name: "numberOfButtons", value: 0, displayed: false)
@@ -414,11 +417,11 @@ def notInverted() {
 }
 
 def doubleUp() {
-	sendEvent(name: "button", value: "pushed", data: [buttonNumber: "1"], descriptionText: "Double-tap up (button 1) on $device.displayName", isStateChange: true, type: "digital")
+	sendEvent(name: "button", value: "pushed", data: [buttonNumber: 1], descriptionText: "Double-tap up (button 1) on $device.displayName", isStateChange: true, type: "digital")
 }
 
 def doubleDown() {
-	sendEvent(name: "button", value: "pushed", data: [buttonNumber: "2"], descriptionText: "Double-tap down (button 2) on $device.displayName", isStateChange: true, type: "digital")
+	sendEvent(name: "button", value: "pushed", data: [buttonNumber: 2], descriptionText: "Double-tap down (button 2) on $device.displayName", isStateChange: true, type: "digital")
 }
 
 def setZwaveSteps(steps) {
@@ -459,7 +462,7 @@ def setAllDelay(delay) {
 
 def poll() {
 	def cmds = []
-    cmds << zwave.switchMultilevelV1.switchMultilevelGet().format()
+    cmds << zwave.switchMultilevelV2.switchMultilevelGet().format()
 	if (getDataValue("MSR") == null) {
 		cmds << zwave.manufacturerSpecificV1.manufacturerSpecificGet().format()
 	}
@@ -472,7 +475,7 @@ def ping() {
 
 def refresh() {
 	def cmds = []
-	cmds << zwave.switchMultilevelV1.switchMultilevelGet().format()
+	cmds << zwave.switchMultilevelV2.switchMultilevelGet().format()
     cmds << zwave.configurationV2.configurationGet(parameterNumber: 3).format()
     cmds << zwave.configurationV2.configurationGet(parameterNumber: 4).format()
     cmds << zwave.configurationV2.configurationGet(parameterNumber: 7).format()

@@ -17,6 +17,7 @@
  *
  *	Changelog:
  *
+ *  0.17 (04/23/2017) - Fix bug with button press events
  *  0.16 (04/19/2017) - Add additional fingerprints, add version to the fingerprints, and code cleanup
  *  0.15 (04/18/2017) - Fix bug in configure() command that was preventing devices from joining properly and cleaned up parse() code
  *  0.14 (03/24/2017) - Add logic to prevent adding the hub to an association group.
@@ -164,10 +165,10 @@ def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicReport cmd) {
 def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicSet cmd) {
     log.debug "---BASIC SET V1--- ${device.displayName} sent ${cmd}"
 	if (cmd.value == 255) {
-    	createEvent(name: "button", value: "pushed", data: [buttonNumber: "1"], descriptionText: "Double-tap up (button 1) on $device.displayName", isStateChange: true, type: "physical")
+    	createEvent(name: "button", value: "pushed", data: [buttonNumber: 1], descriptionText: "Double-tap up (button 1) on $device.displayName", isStateChange: true, type: "physical")
     }
 	else if (cmd.value == 0) {
-    	createEvent(name: "button", value: "pushed", data: [buttonNumber: "2"], descriptionText: "Double-tap down (button 2) on $device.displayName", isStateChange: true, type: "physical")
+    	createEvent(name: "button", value: "pushed", data: [buttonNumber: 2], descriptionText: "Double-tap down (button 2) on $device.displayName", isStateChange: true, type: "physical")
     }
 }
 
@@ -299,11 +300,11 @@ def notInverted() {
 }
 
 def doubleUp() {
-	sendEvent(name: "button", value: "pushed", data: [buttonNumber: "1"], descriptionText: "Double-tap up (button 1) on $device.displayName", isStateChange: true, type: "digital")
+	sendEvent(name: "button", value: "pushed", data: [buttonNumber: 1], descriptionText: "Double-tap up (button 1) on $device.displayName", isStateChange: true, type: "digital")
 }
 
 def doubleDown() {
-	sendEvent(name: "button", value: "pushed", data: [buttonNumber: "2"], descriptionText: "Double-tap down (button 2) on $device.displayName", isStateChange: true, type: "digital")
+	sendEvent(name: "button", value: "pushed", data: [buttonNumber: 2], descriptionText: "Double-tap down (button 2) on $device.displayName", isStateChange: true, type: "digital")
 }
 
 def poll() {
