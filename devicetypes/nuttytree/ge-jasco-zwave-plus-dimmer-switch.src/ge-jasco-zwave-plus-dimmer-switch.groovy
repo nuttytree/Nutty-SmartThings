@@ -17,6 +17,7 @@
  *
  *	Changelog:
  *
+ *  0.16 (08/03/2017) - Fix bug with status not getting updated when turned on/off from SmartThings
  *  0.15 (04/28/2017) - Fix bug with setting level to 100%
  *  0.14 (04/24/2017) - Fix bug in setting and refreshing dimmer delays
  *  0.13 (04/23/2017) - Fix bug with button press events
@@ -249,9 +250,9 @@ def zwaveEvent(physicalgraph.zwave.commands.switchmultilevelv3.SwitchMultilevelS
 
 private dimmerEvents(physicalgraph.zwave.Command cmd) {
 	def value = (cmd.value ? "on" : "off")
-	def result = [createEvent(name: "switch", value: value)]
+	def result = [createEvent(name: "switch", value: value, type: "physical")]
 	if (cmd.value && cmd.value <= 100) {
-		result << createEvent(name: "level", value: cmd.value, unit: "%")
+		result << createEvent(name: "level", value: cmd.value, unit: "%", type: "physical")
 	}
 	return result
 }
@@ -395,27 +396,27 @@ def updated() {
 
 def indicatorWhenOn() {
 	sendEvent(name: "indicatorStatus", value: "when on", display: false)
-	sendHubCommand(new physicalgraph.device.HubAction(zwave.configurationV2.configurationSet(configurationValue: [1], parameterNumber: 3, size: 1).format()))
+	zwave.configurationV2.configurationSet(configurationValue: [1], parameterNumber: 3, size: 1).format()
 }
 
 def indicatorWhenOff() {
 	sendEvent(name: "indicatorStatus", value: "when off", display: false)
-	sendHubCommand(new physicalgraph.device.HubAction(zwave.configurationV2.configurationSet(configurationValue: [0], parameterNumber: 3, size: 1).format()))
+	zwave.configurationV2.configurationSet(configurationValue: [0], parameterNumber: 3, size: 1).format()
 }
 
 def indicatorNever() {
 	sendEvent(name: "indicatorStatus", value: "never", display: false)
-	sendHubCommand(new physicalgraph.device.HubAction(zwave.configurationV2.configurationSet(configurationValue: [2], parameterNumber: 3, size: 1).format()))
+	zwave.configurationV2.configurationSet(configurationValue: [2], parameterNumber: 3, size: 1).format()
 }
 
 def inverted() {
 	sendEvent(name: "inverted", value: "inverted", display: false)
-	sendHubCommand(new physicalgraph.device.HubAction(zwave.configurationV2.configurationSet(configurationValue: [1], parameterNumber: 4, size: 1).format()))
+	zwave.configurationV2.configurationSet(configurationValue: [1], parameterNumber: 4, size: 1).format()
 }
 
 def notInverted() {
 	sendEvent(name: "inverted", value: "not inverted", display: false)
-	sendHubCommand(new physicalgraph.device.HubAction(zwave.configurationV2.configurationSet(configurationValue: [0], parameterNumber: 4, size: 1).format()))
+	zwave.configurationV2.configurationSet(configurationValue: [0], parameterNumber: 4, size: 1).format()
 }
 
 def doubleUp() {
@@ -429,7 +430,7 @@ def doubleDown() {
 def setZwaveSteps(steps) {
 	steps = Math.max(Math.min(steps, 99), 1)
 	sendEvent(name: "zwaveSteps", value: steps, displayed: false)	
-	sendHubCommand(new physicalgraph.device.HubAction(zwave.configurationV2.configurationSet(scaledConfigurationValue: steps, parameterNumber: 7, size: 1).format()))
+	zwave.configurationV2.configurationSet(scaledConfigurationValue: steps, parameterNumber: 7, size: 1).format()
 }
 
 def setZwaveDelay(delay) {
@@ -441,25 +442,25 @@ def setZwaveDelay(delay) {
 def setManualSteps(steps) {
 	steps = Math.max(Math.min(steps, 99), 1)
 	sendEvent(name: "manualSteps", value: steps, displayed: false)	
-	sendHubCommand(new physicalgraph.device.HubAction(zwave.configurationV2.configurationSet(scaledConfigurationValue: steps, parameterNumber: 9, size: 1).format()))
+	zwave.configurationV2.configurationSet(scaledConfigurationValue: steps, parameterNumber: 9, size: 1).format()
 }
 
 def setManualDelay(delay) {
 	delay = Math.max(Math.min(delay, 255), 1)
 	sendEvent(name: "manualDelay", value: delay, displayed: false)
-	sendHubCommand(new physicalgraph.device.HubAction(zwave.configurationV2.configurationSet(scaledConfigurationValue: delay, parameterNumber: 10, size: 2).format()))
+	zwave.configurationV2.configurationSet(scaledConfigurationValue: delay, parameterNumber: 10, size: 2).format()
 }
 
 def setAllSteps(steps) {
 	steps = Math.max(Math.min(steps, 99), 1)
 	sendEvent(name: "allSteps", value: steps, displayed: false)	
-	sendHubCommand(new physicalgraph.device.HubAction(zwave.configurationV2.configurationSet(scaledConfigurationValue: steps, parameterNumber: 11, size: 1).format()))
+	zwave.configurationV2.configurationSet(scaledConfigurationValue: steps, parameterNumber: 11, size: 1).format()
 }
 
 def setAllDelay(delay) {
 	delay = Math.max(Math.min(delay, 255), 1)
 	sendEvent(name: "allDelay", value: delay, displayed: false)
-	sendHubCommand(new physicalgraph.device.HubAction(zwave.configurationV2.configurationSet(scaledConfigurationValue: delay, parameterNumber: 12, size: 2).format()))
+	zwave.configurationV2.configurationSet(scaledConfigurationValue: delay, parameterNumber: 12, size: 2).format()
 }
 
 def poll() {
@@ -494,21 +495,22 @@ def refresh() {
 }
 
 def on() {
-	delayBetween([
-		zwave.basicV1.basicSet(value: 0xFF).format(),
-		zwave.switchBinaryV1.switchBinaryGet().format()
-	], 100)
+	def cmds = []
+    cmds << zwave.basicV1.basicSet(value: 0xFF).format()
+   	cmds << zwave.switchMultilevelV2.switchMultilevelGet().format()
+    def delay = (device.currentValue("zwaveSteps") * device.currentValue("zwaveDelay")).longValue() + 1000
+    delayBetween(cmds, delay)
 }
 
 def off() {
-	delayBetween([
-		zwave.basicV1.basicSet(value: 0x00).format(),
-		zwave.switchBinaryV1.switchBinaryGet().format()
-	], 100)
+	def cmds = []
+    cmds << zwave.basicV1.basicSet(value: 0x00).format()
+   	cmds << zwave.switchMultilevelV2.switchMultilevelGet().format()
+    def delay = (device.currentValue("zwaveSteps") * device.currentValue("zwaveDelay")).longValue() + 1000
+    delayBetween(cmds, delay)
 }
 
 def setLevel(value) {
-	log.debug "setLevel >> value: $value"
 	def valueaux = value as Integer
 	def level = Math.max(Math.min(valueaux, 99), 0)
 	if (level > 0) {
@@ -517,7 +519,11 @@ def setLevel(value) {
 		sendEvent(name: "switch", value: "off")
 	}
 	sendEvent(name: "level", value: level, unit: "%")
-	delayBetween ([zwave.basicV1.basicSet(value: level).format(), zwave.switchMultilevelV1.switchMultilevelGet().format()], 100)
+    def delay = (device.currentValue("zwaveSteps") * device.currentValue("zwaveDelay") * level / 100).longValue() + 1000
+	delayBetween ([
+    	zwave.basicV1.basicSet(value: level).format(),
+        zwave.switchMultilevelV1.switchMultilevelGet().format()
+    ], delay )
 }
 
 def setLevel(value, duration) {
