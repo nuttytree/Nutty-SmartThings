@@ -17,6 +17,7 @@
  *
  *	Changelog:
  *
+ *  0.18 (12/24/2019) - Add missing param 6 that controls Zwave SetLevel behavior (1 = ramp, 0 (default) = Instant)
  *  0.17 (11/05/2018) - Add additional versions of the GE Z-Wave Plus Wall Dimmer
  *  0.16 (08/03/2017) - Fix bug with status not getting updated when turned on/off from SmartThings
  *  0.15 (04/28/2017) - Fix bug with setting level to 100%
@@ -48,6 +49,7 @@ metadata {
 		capability "Switch Level"
 
 		attribute "inverted", "enum", ["inverted", "not inverted"]
+        attribute "zwaveRamp", "enum", ["Ramp", "Instant"]
         attribute "zwaveSteps", "number"
         attribute "zwaveDelay", "number"
         attribute "manualSteps", "number"
@@ -61,6 +63,8 @@ metadata {
         command "notInverted"
         command "levelUp"
         command "levelDown"
+        command "zwaveDimInstant"
+        command "zwaveDimRamp"
         command "setZwaveSteps"
         command "setZwaveDelay"
         command "setManualSteps"
@@ -160,10 +164,14 @@ metadata {
 			state "inverted", label: "Inverted", action:"notInverted", icon:"https://raw.githubusercontent.com/nuttytree/Nutty-SmartThings/master/devicetypes/nuttytree/SwitchInverted.png", backgroundColor: "#ffffff"
 		}
 
-		standardTile("refresh", "device.switch", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
-			state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
+		standardTile("zwaveRamp", "device.zwaveRamp", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {			
+			state "Ramp", label: "Zwave Ramp", action:"zwaveDimInstant", icon:"http://cdn.device-icons.smartthings.com/Health & Wellness/health7-icn@2x.png", backgroundColor: "#ffffff"
+            state "Instant", label: "Zwave Instant", action:"zwaveDimRamp", icon:"http://cdn.device-icons.smartthings.com/Lighting/light11-icn@2x.png", backgroundColor: "#ffffff"
 		}
-
+        
+		standardTile("refresh", "device.switch", width: 6, height: 2, inactiveLabel: false, decoration: "flat") {
+			state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
+		}        
 		standardTile("zwaveStepsLabel", "device.zwaveSteps",  width: 2, height: 1, inactiveLabel: false) {
         	state "default", label:'Z-Wave Dim Steps: ${currentValue}'
         }
@@ -208,7 +216,8 @@ metadata {
 
 		main "switch"
         details(["switch", "doubleUp", "doubleDown",
-        		 "indicator", "inverted", "refresh",
+        		 "indicator", "inverted", "zwaveRamp",
+                 "refresh",
                  "zwaveStepsLabel", "zwaveSteps", "zwaveDelayLabel", "zwaveDelay",
                  "manualStepsLabel", "manualSteps", "manualDelayLabel", "manualDelay",
                  "allStepsLabel", "allSteps", "allDelayLabel", "allDelay"])
@@ -300,6 +309,10 @@ def zwaveEvent(physicalgraph.zwave.commands.configurationv2.ConfigurationReport 
             name = "inverted"
             value = reportValue == 1 ? "true" : "false"
             break
+        case 6:
+            name = "zwaveRamp"
+            value = reportValue == 1 ? "true" : "false"
+            break          
         case 7:
             name = "zwaveSteps"
             value = reportValue
@@ -359,6 +372,7 @@ def configure() {
     // Get current config parameter values
     cmds << zwave.configurationV2.configurationGet(parameterNumber: 3).format()
     cmds << zwave.configurationV2.configurationGet(parameterNumber: 4).format()
+    cmds << zwave.configurationV2.configurationGet(parameterNumber: 6).format()
     cmds << zwave.configurationV2.configurationGet(parameterNumber: 7).format()
     cmds << zwave.configurationV2.configurationGet(parameterNumber: 8).format()
     cmds << zwave.configurationV2.configurationGet(parameterNumber: 9).format()
@@ -423,6 +437,18 @@ def notInverted() {
 	zwave.configurationV2.configurationSet(configurationValue: [0], parameterNumber: 4, size: 1).format()
 }
 
+def zwaveDimInstant() {
+	sendEvent(name: "zwaveRamp", value: "Instant", display: false)
+	zwave.configurationV2.configurationSet(scaledConfigurationValue: 0, parameterNumber: 6, size: 1).format()
+    log.debug "Sent Dim Instant Command"
+}
+
+def zwaveDimRamp() {
+	sendEvent(name: "zwaveRamp", value: "Ramp", display: false)
+	zwave.configurationV2.configurationSet(scaledConfigurationValue: 1, parameterNumber: 6, size: 1).format()
+    log.debug "Sent Dim Ramp Command"
+}
+
 def doubleUp() {
 	sendEvent(name: "button", value: "pushed", data: [buttonNumber: 1], descriptionText: "Double-tap up (button 1) on $device.displayName", isStateChange: true, type: "digital")
 }
@@ -430,7 +456,13 @@ def doubleUp() {
 def doubleDown() {
 	sendEvent(name: "button", value: "pushed", data: [buttonNumber: 2], descriptionText: "Double-tap down (button 2) on $device.displayName", isStateChange: true, type: "digital")
 }
-
+/*
+def setZwaveRampOnOff(onOff) {
+	onOff = Math.max(Math.min(onOff, 1), 0)
+	sendEvent(name: "zwaveRampOnOff", value: onOff, displayed: false)	
+	zwave.configurationV2.configurationSet(scaledConfigurationValue: onOff, parameterNumber: 6, size: 1).format()
+}
+*/
 def setZwaveSteps(steps) {
 	steps = Math.max(Math.min(steps, 99), 1)
 	sendEvent(name: "zwaveSteps", value: steps, displayed: false)	
@@ -485,6 +517,7 @@ def refresh() {
 	cmds << zwave.switchMultilevelV2.switchMultilevelGet().format()
     cmds << zwave.configurationV2.configurationGet(parameterNumber: 3).format()
     cmds << zwave.configurationV2.configurationGet(parameterNumber: 4).format()
+    cmds << zwave.configurationV2.configurationGet(parameterNumber: 6).format()
     cmds << zwave.configurationV2.configurationGet(parameterNumber: 7).format()
     cmds << zwave.configurationV2.configurationGet(parameterNumber: 8).format()
     cmds << zwave.configurationV2.configurationGet(parameterNumber: 9).format()
