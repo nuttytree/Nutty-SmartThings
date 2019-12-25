@@ -17,6 +17,7 @@
  *
  *	Changelog:
  *
+ *  0.18 (04/23/2017) - Add additional fingerprint for new version of switch
  *  0.17 (04/23/2017) - Fix bug with button press events
  *  0.16 (04/19/2017) - Add additional fingerprints, add version to the fingerprints, and code cleanup
  *  0.15 (04/18/2017) - Fix bug in configure() command that was preventing devices from joining properly and cleaned up parse() code
@@ -53,6 +54,7 @@ metadata {
         command "notInverted"
         
         // These include version because there are older firmwares that don't support double-tap or the extra association groups
+		fingerprint mfr:"0063", prod:"4952", model: "3135", ver: "5.53", deviceJoinName: "GE Wall Switch"
 		fingerprint mfr:"0063", prod:"4952", model: "3036", ver: "5.20", deviceJoinName: "GE Z-Wave Plus Wall Switch"
 		fingerprint mfr:"0063", prod:"4952", model: "3037", ver: "5.20", deviceJoinName: "GE Z-Wave Plus Toggle Switch"
 		fingerprint mfr:"0063", prod:"4952", model: "3038", ver: "5.20", deviceJoinName: "GE Z-Wave Plus Toggle Switch"
