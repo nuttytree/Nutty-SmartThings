@@ -17,6 +17,7 @@
  *
  *	Changelog:
  *
+ *  0.17 (11/05/2018) - Add additional versions of the GE Z-Wave Plus Wall Dimmer
  *  0.16 (08/03/2017) - Fix bug with status not getting updated when turned on/off from SmartThings
  *  0.15 (04/28/2017) - Fix bug with setting level to 100%
  *  0.14 (04/24/2017) - Fix bug in setting and refreshing dimmer delays
@@ -69,6 +70,9 @@ metadata {
         
         // These include version because there are older firmwares that don't support double-tap or the extra association groups
         fingerprint mfr:"0063", prod:"4944", model:"3038", ver: "5.26", deviceJoinName: "GE Z-Wave Plus Wall Dimmer"
+	fingerprint mfr:"0063", prod:"4944", model:"3038", ver: "5.27", deviceJoinName: "GE Z-Wave Plus Wall Dimmer"
+	fingerprint mfr:"0063", prod:"4944", model:"3038", ver: "5.28", deviceJoinName: "GE Z-Wave Plus Wall Dimmer"
+	fingerprint mfr:"0063", prod:"4944", model:"3038", ver: "5.29", deviceJoinName: "GE Z-Wave Plus Wall Dimmer"
         fingerprint mfr:"0063", prod:"4944", model:"3039", ver: "5.19", deviceJoinName: "GE Z-Wave Plus 1000W Wall Dimmer"
         fingerprint mfr:"0063", prod:"4944", model:"3130", ver: "5.21", deviceJoinName: "GE Z-Wave Plus Toggle Dimmer"
         fingerprint mfr:"0063", prod:"4944", model:"3135", ver: "5.26", deviceJoinName: "Jasco Z-Wave Plus Wall Dimmer"
