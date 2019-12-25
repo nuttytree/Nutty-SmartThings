@@ -17,6 +17,7 @@
  *
  *	Changelog:
  *
+ *  0.18 (12/25/2019) - Add additional fingerprint for new version of switch
  *  0.17 (11/05/2018) - Add additional versions of the GE Z-Wave Plus Wall Dimmer
  *  0.16 (08/03/2017) - Fix bug with status not getting updated when turned on/off from SmartThings
  *  0.15 (04/28/2017) - Fix bug with setting level to 100%
@@ -69,7 +70,8 @@ metadata {
         command "setAllDelay"
         
         // These include version because there are older firmwares that don't support double-tap or the extra association groups
-        fingerprint mfr:"0063", prod:"4944", model:"3038", ver: "5.26", deviceJoinName: "GE Z-Wave Plus Wall Dimmer"
+        fingerprint mfr:"0063", prod:"4944", model:"3235", ver: "5.53", deviceJoinName: "GE In-Wall Smart Dimmer"
+	fingerprint mfr:"0063", prod:"4944", model:"3038", ver: "5.26", deviceJoinName: "GE Z-Wave Plus Wall Dimmer"
 	fingerprint mfr:"0063", prod:"4944", model:"3038", ver: "5.27", deviceJoinName: "GE Z-Wave Plus Wall Dimmer"
 	fingerprint mfr:"0063", prod:"4944", model:"3038", ver: "5.28", deviceJoinName: "GE Z-Wave Plus Wall Dimmer"
 	fingerprint mfr:"0063", prod:"4944", model:"3038", ver: "5.29", deviceJoinName: "GE Z-Wave Plus Wall Dimmer"
