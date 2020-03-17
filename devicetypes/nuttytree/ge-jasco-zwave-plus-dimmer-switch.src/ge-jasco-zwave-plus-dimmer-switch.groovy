@@ -495,14 +495,14 @@ def refresh() {
 	if (getDataValue("MSR") == null) {
 		cmds << zwave.manufacturerSpecificV1.manufacturerSpecificGet().format()
 	}
-	delayBetween(cmds,500)
+	delayBetween(cmds,750)
 }
 
 def on() {
 	def cmds = []
     cmds << zwave.basicV1.basicSet(value: 0xFF).format()
    	cmds << zwave.switchMultilevelV2.switchMultilevelGet().format()
-    def delay = (device.currentValue("zwaveSteps") * device.currentValue("zwaveDelay")).longValue() + 1000
+    def delay = ((device.currentValue("zwaveSteps") * device.currentValue("zwaveDelay")).longValue() * 1000) + 500
     delayBetween(cmds, delay)
 }
 
@@ -510,7 +510,7 @@ def off() {
 	def cmds = []
     cmds << zwave.basicV1.basicSet(value: 0x00).format()
    	cmds << zwave.switchMultilevelV2.switchMultilevelGet().format()
-    def delay = (device.currentValue("zwaveSteps") * device.currentValue("zwaveDelay")).longValue() + 1000
+    def delay = ((device.currentValue("zwaveSteps") * device.currentValue("zwaveDelay")).longValue() * 1000) + 500
     delayBetween(cmds, delay)
 }
 
