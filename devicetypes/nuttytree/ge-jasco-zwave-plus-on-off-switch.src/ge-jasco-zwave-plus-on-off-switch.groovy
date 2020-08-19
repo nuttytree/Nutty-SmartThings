@@ -17,6 +17,7 @@
  *
  *	Changelog:
  *
+ *  0.18 (08/19/2020) - Updated code make buttons work with new Smartlighting App
  *  0.17 (04/23/2017) - Fix bug with button press events
  *  0.16 (04/19/2017) - Add additional fingerprints, add version to the fingerprints, and code cleanup
  *  0.15 (04/18/2017) - Fix bug in configure() command that was preventing devices from joining properly and cleaned up parse() code
@@ -34,6 +35,10 @@
  *   Double-Tap Down   2        pressed
  *
  */
+
+import groovy.transform.Field
+import groovy.json.JsonOutput
+
 metadata {
 	definition (name: "GE/Jasco Z-Wave Plus On/Off Switch", namespace: "nuttytree", author: "Chris Nussbaum") {
 		capability "Actuator"
@@ -145,6 +150,8 @@ def parse(String description) {
     } else {
         log.debug "Non-parsed event: ${description}"
     }
+    if (!device.currentValue("supportedButtonValues")) {
+        sendEvent(name: "supportedButtonValues", value:JsonOutput.toJson(["pushed"]), displayed:false)}
     result    
 }
 
