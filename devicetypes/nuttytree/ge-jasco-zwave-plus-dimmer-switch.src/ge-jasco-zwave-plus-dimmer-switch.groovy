@@ -17,6 +17,7 @@
  *
  *	Changelog:
  *
+ *  0.18 (08/19/2020) - Updated to add compatibility to new Smarthings App and Smartlighting SmartApp - Various changes to timing parameters as well for proper device status
  *  0.17 (11/05/2018) - Add additional versions of the GE Z-Wave Plus Wall Dimmer
  *  0.16 (08/03/2017) - Fix bug with status not getting updated when turned on/off from SmartThings
  *  0.15 (04/28/2017) - Fix bug with setting level to 100%
@@ -34,6 +35,10 @@
  *   Double-Tap Down   2        pressed
  *
  */
+
+import groovy.transform.Field
+import groovy.json.JsonOutput
+
 metadata {
 	definition (name: "GE/Jasco Z-Wave Plus Dimmer Switch", namespace: "nuttytree", author: "Chris Nussbaum") {
 		capability "Actuator"
@@ -225,6 +230,9 @@ def parse(String description) {
         log.debug "Parsed ${cmd} to ${result.inspect()}"
     } else {
         log.debug "Non-parsed event: ${description}"
+    }
+    if (!device.currentValue("supportedButtonValues")) {
+        sendEvent(name: "supportedButtonValues", value:JsonOutput.toJson(["pushed"]), displayed:false)
     }
     result    
 }
@@ -495,14 +503,14 @@ def refresh() {
 	if (getDataValue("MSR") == null) {
 		cmds << zwave.manufacturerSpecificV1.manufacturerSpecificGet().format()
 	}
-	delayBetween(cmds,500)
+	delayBetween(cmds,600)
 }
 
 def on() {
 	def cmds = []
     cmds << zwave.basicV1.basicSet(value: 0xFF).format()
    	cmds << zwave.switchMultilevelV2.switchMultilevelGet().format()
-    def delay = (device.currentValue("zwaveSteps") * device.currentValue("zwaveDelay")).longValue() + 1000
+    def delay = ((device.currentValue("zwaveSteps") * device.currentValue("zwaveDelay")).longValue() * 1000) + 500
     delayBetween(cmds, delay)
 }
 
@@ -510,7 +518,7 @@ def off() {
 	def cmds = []
     cmds << zwave.basicV1.basicSet(value: 0x00).format()
    	cmds << zwave.switchMultilevelV2.switchMultilevelGet().format()
-    def delay = (device.currentValue("zwaveSteps") * device.currentValue("zwaveDelay")).longValue() + 1000
+    def delay = ((device.currentValue("zwaveSteps") * device.currentValue("zwaveDelay")).longValue() * 1000) + 500
     delayBetween(cmds, delay)
 }
 
